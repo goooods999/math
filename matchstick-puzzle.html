@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>火柴棒等式 - 移动一根火柴棒让等式成立</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        .watermark {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            background-image: 
+                repeating-linear-gradient(
+                    45deg,
+                    transparent,
+                    transparent 50px,
+                    rgba(255,255,255,0.03) 50px,
+                    rgba(255,255,255,0.03) 100px
+                ),
+                repeating-linear-gradient(
+                    -45deg,
+                    transparent,
+                    transparent 50px,
+                    rgba(255,255,255,0.03) 50px,
+                    rgba(255,255,255,0.03) 100px
+                );
+        }
+
+        .watermark-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 100px;
+            font-weight: 900;
+            color: rgba(255,255,255,0.2);
+            letter-spacing: 15px;
+            white-space: nowrap;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            pointer-events: none;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .watermark-text-2 {
+            position: absolute;
+            top: 25%;
+            left: 25%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            font-size: 70px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.15);
+            letter-spacing: 10px;
+            white-space: nowrap;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+            pointer-events: none;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .game-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .level-info {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .instruction {
+            font-size: 14px;
+            opacity: 0.7;
+            max-width: 300px;
+            line-height: 1.4;
+        }
+
+        .equation-container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .equation {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            position: relative;
+        }
+
+        .number-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .matchstick {
+            width: 60px;
+            height: 8px;
+            background: linear-gradient(90deg, #8B4513 0%, #A0522D 50%, #8B4513 100%);
+            border-radius: 4px;
+            position: absolute;
+            cursor: grab;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+
+        .matchstick:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .matchstick:active {
+            cursor: grabbing;
+            transform: scale(0.95);
+        }
+
+        .matchstick.dragging {
+            z-index: 1000;
+            transform: rotate(5deg) scale(1.1);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+        }
+
+        .operator {
+            font-size: 48px;
+            font-weight: 300;
+            margin: 0 20px;
+        }
+
+        .equals {
+            font-size: 48px;
+            font-weight: 300;
+            margin: 0 20px;
+        }
+
+        .drop-zone {
+            width: 80px;
+            height: 80px;
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.active {
+            border-color: #4CAF50;
+            background: rgba(76,175,80,0.2);
+            transform: scale(1.05);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .control-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn.primary {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            border: none;
+        }
+
+        .control-btn.primary:hover {
+            background: linear-gradient(45deg, #45a049, #4CAF50);
+        }
+
+        .success-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            padding: 30px 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 2000;
+            transition: transform 0.3s ease;
+        }
+
+        .success-message.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .success-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .success-text {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .hint-panel {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .hint-text {
+            font-size: 14px;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+
+        .moves-counter {
+            background: rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        @media (max-width: 768px) {
+            .equation-container {
+                padding: 20px;
+            }
+            
+            .matchstick {
+                width: 40px;
+                height: 6px;
+            }
+            
+            .operator, .equals {
+                font-size: 32px;
+                margin: 0 10px;
+            }
+            
+            .controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="watermark">
+        <div class="watermark-text">姜厚行专用</div>
+        <div class="watermark-text-2">姜厚行专用</div>
+    </div>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">火柴棒等式</h1>
+            <div class="level-info">关卡 <span id="currentLevel">1</span></div>
+            <div class="instruction">移动一根火柴棒，让等式成立</div>
+        </div>
+
+        <div class="moves-counter">
+            已移动: <span id="moveCount">0</span> 根火柴棒
+        </div>
+
+        <div class="equation-container">
+            <div class="equation" id="equation">
+                <!-- 动态生成等式内容 -->
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="resetLevel()">重置关卡</button>
+            <button class="control-btn" onclick="showHint()">提示</button>
+            <button class="control-btn primary" onclick="checkSolution()">检查答案</button>
+        </div>
+
+        <div class="hint-panel" id="hintPanel" style="display: none;">
+            <div class="hint-text" id="hintText"></div>
+        </div>
+    </div>
+
+    <div class="success-message" id="successMessage">
+        <div class="success-title">🎉 恭喜过关！</div>
+        <div class="success-text">你成功让等式成立了！</div>
+    </div>
+
+    <script>
+        // 游戏关卡数据
+        const levels = [
+            {
+                equation: "6 + 4 = 4",
+                solution: "5 + 4 = 9",
+                hint: "试着移动左边数字6的一根火柴棒",
+                matchsticks: {
+                    left: {
+                        6: [
+                            {x: 0, y: 0, rotation: 0},   // 横
+                            {x: 0, y: 20, rotation: 0},  // 横
+                            {x: 0, y: 40, rotation: 0},  // 横
+                            {x: -10, y: 10, rotation: 90}, // 竖
+                            {x: 10, y: 10, rotation: 90},  // 竖
+                            {x: 10, y: 30, rotation: 90}   // 竖
+                        ]
+                    },
+                    right: {
+                        4: [
+                            {x: 0, y: 0, rotation: 90},   // 竖
+                            {x: 0, y: 20, rotation: 90},  // 竖
+                            {x: 0, y: 40, rotation: 90},  // 竖
+                            {x: -10, y: 0, rotation: 0},  // 横
+                            {x: -10, y: 40, rotation: 0}  // 横
+                        ]
+                    }
+                }
+            },
+            {
+                equation: "8 - 3 = 3",
+                solution: "9 - 3 = 6",
+                hint: "试着改变左边数字8的一根火柴棒"
+            },
+            {
+                equation: "5 + 5 = 5",
+                solution: "6 + 5 = 11",
+                hint: "试着移动等号右边的一根火柴棒"
+            }
+        ];
+
+        let currentLevel = 0;
+        let moveCount = 0;
+        let draggedElement = null;
+        let draggedFrom = null;
+
+        // 初始化游戏
+        function initGame() {
+            loadLevel(currentLevel);
+        }
+
+        // 加载关卡
+        function loadLevel(levelIndex) {
+            const level = levels[levelIndex];
+            document.getElementById('currentLevel').textContent = levelIndex + 1;
+            document.getElementById('moveCount').textContent = moveCount;
+            
+            // 解析等式
+            const equation = level.equation;
+            const parts = equation.split(' ');
+            
+            // 生成等式HTML
+            const equationHTML = generateEquationHTML(parts);
+            document.getElementById('equation').innerHTML = equationHTML;
+            
+            // 隐藏提示面板
+            document.getElementById('hintPanel').style.display = 'none';
+        }
+
+        // 生成等式HTML
+        function generateEquationHTML(parts) {
+            let html = '';
+            
+            parts.forEach((part, index) => {
+                if (part === '+' || part === '-' || part === '=') {
+                    html += `<div class="operator">${part}</div>`;
+                } else {
+                    html += `<div class="number-container">${generateNumberHTML(part)}</div>`;
+                }
+            });
+            
+            return html;
+        }
+
+        // 生成数字HTML
+        function generateNumberHTML(number) {
+            const matchsticks = getMatchsticksForNumber(number);
+            let html = '<div class="number-display" style="position: relative; width: 60px; height: 60px;">';
+            
+            matchsticks.forEach((stick, index) => {
+                html += `<div class="matchstick" 
+                    data-number="${number}" 
+                    data-stick="${index}"
+                    style="left: ${stick.x + 20}px; top: ${stick.y}px; transform: rotate(${stick.rotation}deg);"
+                    draggable="true"></div>`;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+
+        // 获取数字的火柴棒配置
+        function getMatchsticksForNumber(number) {
+            const configs = {
+                '0': [
+                    {x: 0, y: 0, rotation: 0},
+                    {x: 0, y: 40, rotation: 0},
+                    {x: -10, y: 0, rotation: 90},
+                    {x: 10, y: 0, rotation: 90},
+                    {x: -10, y: 40, rotation: 90},
+                    {x: 10, y: 40, rotation: 90}
+                ],
+                '1': [
+                    {x: 10, y: 0, rotation: 90},
+                    {x: 10, y: 20, rotation: 90},
+                    {x: 10, y: 40, rotation: 90}
+                ],
+                '2': [
+                    {x: 0, y: 0, rotation: 0},
+                    {x: 0, y: 20, rotation: 0},
+                    {x: 0, y: 40, rotation: 0},
+                    {x: 10, y: 0, rotation: 90},
+                    {x: 0, y: 20, rotation: 90},
+                    {x: -10, y: 40, rotation: 90}
+                ],
+                '3': [
+                    {x: 0, y: 0, rotation: 0},
+                    {x: 0, y: 20, rotation: 0},
+                    {x: 0, y: 40, rotation: 0},
+                    {x: 10, y: 0, rotation: 90},
+                    {x: 10, y: 20, rotation: 90},
+                    {x: 10, y: 40, rotation: 90}
+                ],
+                '4': [
+                    {x: -10, y: 0, rotation: 90},
+                    {x: 0, y: 0, rotation: 90},
+                    {x: 10, y: 0, rotation: 90},
+                    {x: 10, y: 20, rotation: 90},
+                    {x: 0, y: 20, rotation: 0}
+                ],
+                '5': [
+                    {x: 0, y: 0, rotation: 0},
+                    {x: 0, y: 20, rotation: 0},
+                    {x: 0, y: 40, rotation: 0},
+                    {x: -10, y: 0, rotation: 90},
+                    {x: 10, y: 20, rotation: 90},
+                    {x: 10, y: 40, rotation: 90}
+                ],
+                '6': [
+                    {x: 0, y: 0, rotation: 0},
+                    {x: 0, y: 20, rotation: 0},
+                    {x: 0, y: 40, rotation: 0},
+                    {x: -10, y: 0, rotation: 90},
+                    {x: -10, y: 20, rotation: 90},
+                    {x: 10, y: 20, rotation: 90},
+                    {x: 10, y: 40, rotation: 90}
+                ],
+                '7': [
+                    {x: 0, y: 0, rotation: 0},
+                    {x: 10, y: 0, rotation: 90},
+                    {x: 10, y: 20, rotation: 90},
+                    {x: 10, y: 40, rotation: 90}
+                ],
+                '8': [
+                    {x: 0, y: 0, rotation: 0},
+                    {x: 0, y: 20, rotation: 0},
+                    {x: 0, y: 40, rotation: 0},
+                    {x: -10, y: 0, rotation: 90},
+                    {x: 10, y: 0, rotation: 90},
+                    {x: -10, y: 20, rotation: 90},
+                    {x: 10, y: 20, rotation: 90},
+                    {x: -10, y: 40, rotation: 90},
+                    {x: 10, y: 40, rotation: 90}
+                ],
+                '9': [
+                    {x: 0, y: 0, rotation: 0},
+                    {x: 0, y: 20, rotation: 0},
+                    {x: 0, y: 40, rotation: 0},
+                    {x: -10, y: 0, rotation: 90},
+                    {x: 10, y: 0, rotation: 90},
+                    {x: -10, y: 20, rotation: 90},
+                    {x: 10, y: 20, rotation: 90},
+                    {x: 10, y: 40, rotation: 90}
+                ]
+            };
+            
+            return configs[number] || configs['0'];
+        }
+
+        // 拖拽事件处理
+        document.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('matchstick')) {
+                draggedElement = e.target;
+                draggedFrom = e.target.parentElement;
+                e.target.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        });
+
+        document.addEventListener('dragend', (e) => {
+            if (e.target.classList.contains('matchstick')) {
+                e.target.classList.remove('dragging');
+            }
+        });
+
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (draggedElement && e.target.classList.contains('number-display')) {
+                // 移动火柴棒到新位置
+                e.target.appendChild(draggedElement);
+                moveCount++;
+                document.getElementById('moveCount').textContent = moveCount;
+                
+                // 重置拖拽状态
+                draggedElement = null;
+                draggedFrom = null;
+            }
+        });
+
+        // 重置关卡
+        function resetLevel() {
+            moveCount = 0;
+            loadLevel(currentLevel);
+        }
+
+        // 显示提示
+        function showHint() {
+            const hintPanel = document.getElementById('hintPanel');
+            const hintText = document.getElementById('hintText');
+            hintText.textContent = levels[currentLevel].hint;
+            hintPanel.style.display = 'block';
+        }
+
+        // 检查解决方案
+        function checkSolution() {
+            // 这里简化检查逻辑
+            const successMessage = document.getElementById('successMessage');
+            successMessage.classList.add('show');
+            
+            setTimeout(() => {
+                successMessage.classList.remove('show');
+                // 进入下一关
+                currentLevel = (currentLevel + 1) % levels.length;
+                moveCount = 0;
+                loadLevel(currentLevel);
+            }, 2000);
+        }
+
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>
