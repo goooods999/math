@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>日蚀动画 - Apple Style</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        .eclipse-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a0a 70%);
+        }
+
+        .sun {
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, #FFD700 0%, #FFA500 70%, #FF6B35 100%);
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 60px #FFD700, 0 0 100px #FFA500, 0 0 150px #FF6B35;
+            animation: sunGlow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes sunGlow {
+            0% { box-shadow: 0 0 60px #FFD700, 0 0 100px #FFA500, 0 0 150px #FF6B35; }
+            100% { box-shadow: 0 0 80px #FFD700, 0 0 120px #FFA500, 0 0 180px #FF6B35; }
+        }
+
+        .moon {
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, #2c2c2c 0%, #1a1a1a 70%, #000000 100%);
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            transition: transform 0.1s ease-out;
+        }
+
+        .corona {
+            width: 220px;
+            height: 220px;
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, white, transparent),
+                radial-gradient(1px 1px at 50px 160px, white, transparent),
+                radial-gradient(1px 1px at 130px 40px, white, transparent),
+                radial-gradient(2px 2px at 80px 10px, white, transparent);
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            opacity: 0.3;
+            animation: twinkle 4s ease-in-out infinite alternate;
+        }
+
+        @keyframes twinkle {
+            0% { opacity: 0.3; }
+            100% { opacity: 0.8; }
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .control-btn {
+            padding: 15px 30px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 25px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .control-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .progress-bar {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 3px;
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            opacity: 0.8;
+        }
+
+        .eclipse-phase {
+            font-size: 18px;
+            font-weight: 300;
+            margin-bottom: 5px;
+        }
+
+        .eclipse-time {
+            font-size: 14px;
+            opacity: 0.6;
+        }
+
+        .ambient-light {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 30%, rgba(255,255,255,0.05) 100%);
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="eclipse-container">
+        <div class="stars"></div>
+        <div class="ambient-light"></div>
+        <div class="sun"></div>
+        <div class="moon"></div>
+        <div class="corona"></div>
+        
+        <div class="info-panel">
+            <div class="eclipse-phase">日蚀开始</div>
+            <div class="eclipse-time">00:00</div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" onclick="startEclipse()">开始</button>
+            <button class="control-btn" onclick="pauseEclipse()">暂停</button>
+            <button class="control-btn" onclick="resetEclipse()">重置</button>
+        </div>
+    </div>
+
+    <script>
+        let animationId;
+        let isPaused = false;
+        let currentProgress = 0;
+        let startTime;
+        let pausedTime = 0;
+        
+        const moon = document.querySelector('.moon');
+        const sun = document.querySelector('.sun');
+        const corona = document.querySelector('.corona');
+        const progressFill = document.querySelector('.progress-fill');
+        const phaseText = document.querySelector('.eclipse-phase');
+        const timeText = document.querySelector('.eclipse-time');
+        const ambientLight = document.querySelector('.ambient-light');
+        const stars = document.querySelector('.stars');
+        
+        const phases = [
+            { progress: 0, name: '日蚀开始' },
+            { progress: 25, name: '初亏' },
+            { progress: 50, name: '食既' },
+            { progress: 75, name: '食甚' },
+            { progress: 90, name: '生光' },
+            { progress: 100, name: '复圆' }
+        ];
+        
+        function updateEclipse(progress) {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const radius = 250;
+            
+            // 计算月亮位置
+            const angle = (progress / 100) * Math.PI;
+            const moonX = centerX + Math.cos(angle) * radius;
+            const moonY = centerY + Math.sin(angle) * radius * 0.3;
+            
+            moon.style.left = moonX - 90 + 'px';
+            moon.style.top = moonY - 90 + 'px';
+            
+            // 更新进度条
+            progressFill.style.width = progress + '%';
+            
+            // 更新环境光效
+            if (progress > 40 && progress < 60) {
+                const intensity = Math.sin((progress - 40) / 20 * Math.PI);
+                ambientLight.style.opacity = intensity * 0.3;
+                stars.style.opacity = 0.3 + intensity * 0.5;
+            } else {
+                ambientLight.style.opacity = 0;
+                stars.style.opacity = 0.3;
+            }
+            
+            // 日全食效果
+            if (progress > 45 && progress < 55) {
+                corona.style.opacity = Math.sin((progress - 45) / 10 * Math.PI);
+                sun.style.filter = 'brightness(0.3)';
+            } else {
+                corona.style.opacity = 0;
+                sun.style.filter = 'brightness(1)';
+            }
+            
+            // 更新阶段信息
+            const currentPhase = phases.reduce((prev, curr) => 
+                Math.abs(curr.progress - progress) < Math.abs(prev.progress - progress) ? curr : prev
+            );
+            phaseText.textContent = currentPhase.name;
+            
+            // 更新时间
+            const elapsed = (Date.now() - startTime - pausedTime) / 1000;
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = Math.floor(elapsed % 60);
+            timeText.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function animate() {
+            if (!isPaused) {
+                const elapsed = (Date.now() - startTime - pausedTime) / 1000;
+                currentProgress = Math.min((elapsed / 10) * 100, 100);
+                
+                updateEclipse(currentProgress);
+                
+                if (currentProgress < 100) {
+                    animationId = requestAnimationFrame(animate);
+                }
+            }
+        }
+        
+        function startEclipse() {
+            if (!animationId || currentProgress >= 100) {
+                resetEclipse();
+            }
+            isPaused = false;
+            if (!startTime) {
+                startTime = Date.now();
+            }
+            animate();
+        }
+        
+        function pauseEclipse() {
+            isPaused = true;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+        
+        function resetEclipse() {
+            isPaused = false;
+            currentProgress = 0;
+            startTime = null;
+            pausedTime = 0;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            updateEclipse(0);
+        }
+        
+        // 触摸支持
+        let touchStartX = 0;
+        moon.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+        
+        moon.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touchX = e.touches[0].clientX;
+            const deltaX = touchX - touchStartX;
+            currentProgress = Math.max(0, Math.min(100, currentProgress + deltaX * 0.1));
+            updateEclipse(currentProgress);
+            touchStartX = touchX;
+        });
+        
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    isPaused ? startEclipse() : pauseEclipse();
+                    break;
+                case 'r':
+                    resetEclipse();
+                    break;
+                case 'ArrowLeft':
+                    currentProgress = Math.max(0, currentProgress - 5);
+                    updateEclipse(currentProgress);
+                    break;
+                case 'ArrowRight':
+                    currentProgress = Math.min(100, currentProgress + 5);
+                    updateEclipse(currentProgress);
+                    break;
+            }
+        });
+        
+        // 初始化
+        updateEclipse(0);
+    </script>
+</body>
+</html>
